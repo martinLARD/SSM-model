@@ -658,10 +658,10 @@ D2n=0
 
 aa=time.time()
 ICs = np.array([Ca, Cer, h, s, w, x, Na , K, eta_u, D1, D2, D3, D4, C1, C2, C3, C4, Q1, Q2, Q3, Q4, C0a, C1a, C2a, O, D1a, D2a, C0n, C1n, C2n, On, D2n,volt])
-#temp=SPDE_solver(ICs,m=m,tmax=tmax,ATP=0*10**(-3),G=0*10**(-3),ATP_time=240,Glut_time=240)   
+temp=SPDE_solver(ICs,m=m,tmax=tmax,ATP=0*10**(-3),G=0*10**(-3),ATP_time=240,Glut_time=240)   
 bb=time.time()
 print('Computation time:',bb-aa)
-#Ca=temp[0].T
+
 
 def multsimu(temp):
 
@@ -712,117 +712,4 @@ def multsimu(temp):
     plt.plot()
     plt.show()
    
-#multsimu(temp)
-    
-Catot=np.zeros(1)
-for i in range(50):
-    
-    aa=time.time()
-    temp=SPDE_solver(ICs,m=m,tmax=tmax,ATP=0*10**(-3),G=0*10**(-3),ATP_time=240,Glut_time=240)   
-    bb=time.time()
-    if temp==None:
-             print('yes')
-             pass
-    else:
-        print('Computation time:',bb-aa)
-        Ca=temp[0].T
-        
-        Catot=np.concatenate([Catot,Ca[4]])
-
-Catot=stats.zscore(Catot)   
-plt.hist(Catot[1:],density=True,bins=100)
-plt.title('Distribution of z-scored Calcium signals (WT)')
-plt.xlim(-2.5,2.5)
-plt.plot()
-
-# countot=np.zeros(50)
-# for j in range(50):
-#     if j%10==0:
-#         print(j)
-#     temp=SPDE_solver(ICs,m=m,tmax=tmax,ATP=0*10**(-3),G=0*10**(-3),ATP_time=240,Glut_time=240)   
-#     if temp==None:
-#         print('yes')
-#         pass
-#     else:
-#         Ca=temp[0].T[4]
-#         Ca=Ca[3000:]
-#         tempo=np.zeros(len(Ca))
-#         count=0
-#         plt.plot(Ca)
-#         plt.show()
-#         Catot=np.concatenate([Catot,Ca])
-#         for i in range(len(Ca)):
-#               tempo[i]=max(Ca[i],np.mean(Ca)+np.std(Ca))
-#               if tempo[i-1]==np.mean(Ca)+np.std(Ca) and tempo[i]==Ca[i]:
-#                   count+=1
-#         countot[j]=count
-
-# plt.hist(Catot[1:],density=True,bins=100)
-# plt.title('Distribution of z-scored Calcium signals with rdn ATP')
-# plt.xlim(-1,1)
-# plt.show()
-
-
-# plt.boxplot(countot[countot!=0]*0.2)
-# plt.title('number of spikes per min for 50 simulations')
-# plt.show()
-
-
-
-
-
-
-#######################
-# name='01'
-
-# df = pd.read_excel (f'OPC Ca Imaging K+ {name}.xlsx')
-# data=df.to_numpy().T
-
-# t=data[0]
-
-
-# def normalizedata(data):
-#     for i in range(np.shape(data)[0]):
-#         data[i]=(data[i]-min(data[i]))/max(data[i]-min(data[i]))
-#     return data
-
-
- 
-# plt.plot(np.linspace(0,382,len(data[0])),data[30])
-# plt.xlabel('time in s')
-# plt.title('dataset 02')
-# plt.show()
-
-# def fitting(simu,datas,resp):
-#     RMSE=np.zeros(len(datas.T[0]))
-#     end=len(simu)
-#     pas=int(len(simu)/len(data[0][43:int(end*180/360)]))
-#     end=len(simu)-resp/100
-#     jtemp=0
-#     simu2=np.zeros(len(data[0][43:int(end*180/360)]))
-#     for j in range(len(data[0][43:int(end*180/360)])):
-#         jtemp=jtemp+pas
-#         simu2[j]=simu[jtemp]
-#     simu2=np.array(simu2)
-#     for i in range(len(datas.T[0])):
-#         print(np.sqrt(sum((simu2-data[i][43:int(end*180/360)])**2)/len(data[i][43:int(end*180/360)])))
-#         RMSE[i]=np.sqrt(sum((simu2-data[i][43:int(end*180/360)])**2)/len(data[i][43:int(end*180/360)]))
-#     print(np.where(min(RMSE)==RMSE)[0][0])
-#     plt.plot(data[np.where(min(RMSE)==RMSE)[0][0]][43:int(end*180/360)])
-#     plt.plot(simu2)
-#     plt.show()
-   
-    
-# i=0
-# resp=0
-# Ca=temp[0].T[4]
-# while resp<1:
-#     i=i+1
-#     if Ca[i]>1.2 and Ca[i+1000]>1.2 and i>5000:
-#         resp=i
-#     if i>len(Ca):
-#         i=len(Ca)
-
-# Ca=(Ca[resp:]-min(Ca[resp:]))/max(Ca[resp:]-min(Ca[resp:]))
-# fitting(Ca,data,resp)
-        
+multsimu(temp)
