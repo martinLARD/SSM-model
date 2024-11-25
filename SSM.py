@@ -3,10 +3,8 @@ import matplotlib.pyplot as plt
 from numba import jit
 from scipy import stats
 from scipy.optimize import curve_fit
-import scalt_compute as sc
+import seaborn as sb
 import time
-import imageio
-import pandas as pd
 
 # Error class
 class StabilityError(Exception):
@@ -33,13 +31,18 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
               vncx = 1.4,
               Vmean=-60,
               eta = 0.45,
-              ATP=0*10**(-3), #in M
-              ATP_start=50,
-              ATP_time=0, #in s
-              Glut_start=50,
-              G=0*10**(-3), #in M
-              Glut_time=0,
+              ATP=0*10**(-3), #ATP in M if rdm ATP==True
+              ATP_start=0, #start time of the ATP signal
+              ATP_time=0, #in s duration of the ATP signal
+              Glut_start=0, #start time of the glutamate signal
+              G=0*10**(-3), #glutamate in M if rdmGlut==True 
+              Glut_time=0, #duration of the glutamate signal
+              rdmATP=False, #if True, add a random ATP signal
+              rdmGlut=False,  #if True, add a random Glutamate signal
+              gL=0.8, #L-type 
+              gT=0.5, #T-type
               mode=0,
+
               ):
     
     # Random seed
@@ -160,16 +163,10 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
     #IP3
     alphatp=0.03
     katp=1
-    gammatpglut=0.01
+    gammatpglut= 0.01#0.01
     alphaglut=0.03
     kglut=1
-    
-    
-    
-    #L-type/T-type
-    gL=0.8#3.5 #nS
-    gT=0.5#0.006 #nS
-    
+
     # Jk
     
     gk=11.58 #nS
@@ -411,7 +408,6 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
 
     ####scheme###
     def dCa_dt(Ca, Cer, h, s, w, Na, K, Q1, Q2, Q3, Q4,O,On,IP3,volt,mL,mT,hTf,hL):
-        #print([Jip3(Ca, Cer, h,IP3),Jleak(Ca, Cer),Jryr(Ca, Cer, w),-Jserca(Ca),Jin(Ca,Cer, Na,K, Q1, Q2, Q3, Q4,volt), Jncxca(Ca,Na ,volt), -Jpmca(Ca)])
         return fi * (Jip3(Ca, Cer, h,IP3)+Jleak(Ca, Cer)+Jryr(Ca, Cer, w)-Jserca(Ca)+ Jin(Ca,Cer, Na,K, Q1, Q2, Q3, Q4,volt)+ Jncxca(Ca,Na ,volt)- Jpmca(Ca)+Jnmda_Ca(On, Ca, Na, K,volt)+Jampa_Ca(O, Ca, Na, K,volt)+Jt(Ca,mT,hTf,volt)+Jl(Ca,mL,hL,volt))#
     
     def dNa(Ca, Cer ,K,Na,volt,O,On,Q1,Q2,Q3,Q4,Kout):
@@ -473,29 +469,33 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
             A=0
         else:
             A=ATP
-        # if np.random.binomial(1, 0.005)==1:
-        #         trace=k
-        #         rdn=np.abs(np.random.randn(1)*10**-3)[0]
-        # if k<trace+10:
-        #         A=rdn
+        if rdmATP==True:
+            
+            if np.random.binomial(1, 0.005)==1:
+                    trace=k
+                    rdn=np.abs(np.random.randn(1)*10**-3)[0]
+            if k<trace+10:
+                    A=rdn
+        saveA[k]=A
         if k<Glut_start*100:
             Glut=0
         elif k>Glut_start*100+Glut_time*100:
             Glut=0
         else:
             Glut=G
-        # if np.random.binomial(1, 0.005)==1:
-        #             trace=k
-        #             rdn=np.abs(np.random.randn(1)*10**-3)[0]
-        # if k<trace+10:
-        #             Glut=rdn
+        if rdmGlut==True:
+            #print("rdm Glut")
+            if np.random.binomial(1, 0.005)==1:
+                        trace=k
+                        rdn=np.abs(np.random.randn(1)*10**-3)[0]
+            if k<trace+10:
+                        Glut=rdn
         saveA[k]=Glut
 
-            
-        #print(f'dynam time {time1-str_time}')
-        tot=1#8*k1+3*4*k2*A+2*2*k3+2*2*k4*A+2*3*k5+2*k6*A+L1+L2+L3+H1+H2+Hat2+H3+H4
-        totn=1#Rbn*Glut*2+R0n+Rcn+Rrn+Rdn+Run*2
-        tota=1#Rb*Glut*2+R0+Rc+Rr*2+Rd*2+Ru1+Ru2
+        #P2x7
+        tot=1
+        totn=1
+        tota=1
         D1[k + 1 ] = D1[k ]+ (k1/tot*D2[k ]-(3*k2*A/tot+H1/tot)*D1[k ])*dt
         D2[k + 1 ] = D2[k ]+ (3*k2*A/tot*D1[k ]+2*k3/tot*D3[k ]+H2/tot*C2[k ] -(k1/tot+2*k4*A/tot+H3/tot)*D2[k ])*dt
         D3[k + 1 ] = D3[k ]+ (2*k4*A/tot*D2[k ]+3*k5/tot*D4[k ]+Hat2/tot*Q1[k ]-(2*k3/tot+k6*A/tot)*D3[k ])*dt
@@ -511,7 +511,6 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
           
         #IP3
         IP3[k + 1]= IP3[k] + (alphatp*(A*1000/(A*1000+katp))-gammatpglut*IP3[k]+alphaglut*(Glut*1000/(Glut*1000+kglut)))*dt
-        
         
         #Kout
         if k>50 *100:
@@ -583,16 +582,12 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
             hTf=(0.99797-barhT(volt[k, i]))*np.exp(-k*dt/tauhTf(volt[k, i]))+barhT(volt[k, i])
             
         
-            saveL[k]=(1.4135e-5-barmL(volt[k, 4]))*np.exp(-k*dt/taumL(volt[k, 4]))+barmL(volt[k, 4])
+            saveL[k]=(1.2135e-5-barmL(volt[k, i]))*np.exp(-k*dt/taumL(volt[k, i]))+barmL(volt[k, i])
             savehL[k]=(0.999998-barhL(volt[k, i]))*np.exp(-k*dt/tauhL(volt[k, i]))+barhL(volt[k, i])
             saveT[k]=(3.2529e-05-barmT(volt[k, 4]))*np.exp(-k*dt/taumT(volt[k, 4]))+barmT(volt[k, 4])
             saveTf[k]=(0.99797-barhT(volt[k, 4]))*np.exp(-k*dt/tauhTf(volt[k, 4]))+barhT(volt[k, 4])
             
-            if i > 0 and i < m-1:
-                if np.isnan(Ca[k, i]):
-                    print('!!! NaN value !!')
-                    return None
-                
+            if i > 0 and i < m-1:                
                 Ca[k + 1, i] = r*Ca[k, i-1] + (1 - 2*r)*Ca[k, i] + r*Ca[k, i+1] + dCa_dt(Ca[k, i], Cer[k, i], h[k, i], s[k, i], w[k, i], Na[k, i], K[k, i], Q1[k], Q2[k], Q3[k], Q4[k],O[k], On[k],IP3[k],volt[k, i],mL,mT,hTf,hL) * dt
                 Na[k + 1, i] = r*Na[k, i-1] + (1 - 2*r)*Na[k, i] + r*Na[k, i+1] + dNa(Ca[k, i],Cer[k, i], K[k, i],Na[k, i],volt[k, i],O[k],On[k],Q1[k],Q2[k],Q3[k],Q4[k],Ko[k]) * dt
                 K[k + 1, i]  = r*K[k, i-1]  + (1 - 2*r)*K[k, i]  + r*K[k, i+1] + dK(Ca[k, i],K[k, i],Na[k, i],volt[k, i],O[k],On[k],Q1[k],Q2[k],Q3[k],Q4[k],Ko[k])*dt
@@ -606,37 +601,36 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
             
             eta_u[k + 1, i] = eta_u[k, i] + (-eta_u[k, i]/tau_c) * dt + np.sqrt(2*D/tau_c) * noise_term[k, i]
 
-            #print(f'ampa/dnma markovchain {time3-time2}')
-            #print('#####')
-     
-        #print(f'syst time t {time32-time3}')
 
-    return Ca, volt , K, Na, Cer, h, w, C2a , O, D1a, D2a, C0n, C1n, C2n, On, D2n,Jl(Ca.T[4],saveL,savehL,volt.T[4]),saveA
+     
+    if np.isnan(Ca[4, 1]):
+        print('!!! NaN value !!')
+        Ca=np.zeros((8,2))
+    return Ca, volt , K, Na, Cer, h, w, x , saveL, hL, mT, hTf, D1a, D2a, C0n, C1n, C2n, On, D2n,Jl(Ca.T[4],saveL,savehL,volt.T[4]),saveA
 
 m=8
 tmax=300
 
-Ca=0.15523
-Cer=29.2946
-h=0.661
-s=0.89609
-w=0.6605
-x=0.14634
-Na=12.1021
-K=117.07227
-volt=-67.6531
+Ca=0.12793826558703106
+Cer=25.89886506198918
+h=0.7029480300345915
+s=0.0
+w=0.8058087859864412
+x=0.0#0.14634
+Na=12.102167095429627
+K=117.07222293193016
+volt=-67.65327008405072
 eta_u=0.0
 
-
-D1=0#0.011#0.
-D2=0#0.0248#0.
-D3=0#0.00224#0.
-D4=0#1.0456*10**(-5)#0.
-C1=1#0.426#1.
-C2=0#0.5033#0.
-C3=0#8.6269*10**(-6)#0.
-C4=0#2.9274*10**(-6)#0.
-Q1=0#0.03243#0.
+D1=0.
+D2=0.
+D3=0
+D4=0
+C1=1
+C2=0
+C3=0
+C4=0
+Q1=0.
 Q2=0#0.000149#0.
 Q3=0#9.06487*10**(-6)#0.
 Q4=0#1.1157*10**(-5)#0.
@@ -658,58 +652,6 @@ D2n=0
 
 aa=time.time()
 ICs = np.array([Ca, Cer, h, s, w, x, Na , K, eta_u, D1, D2, D3, D4, C1, C2, C3, C4, Q1, Q2, Q3, Q4, C0a, C1a, C2a, O, D1a, D2a, C0n, C1n, C2n, On, D2n,volt])
-temp=SPDE_solver(ICs,m=m,tmax=tmax,ATP=0*10**(-3),G=0*10**(-3),ATP_time=240,Glut_time=240)   
+temp=SPDE_solver(ICs,m=m,tmax=tmax)   
 bb=time.time()
 print('Computation time:',bb-aa)
-
-
-def multsimu(temp):
-
-    Ca=temp[0].T[4]
-    
-    t=np.linspace(0,tmax,len(Ca))
-    plt.plot(t,Ca)
-    plt.xlabel("time t in $s$")
-    # plt.xlim(320,500)
-    plt.ylabel("Ca in $\mu Mol$ ")
-    plt.show()
-    
-    
-    K=temp[2].T[4]
-    
-    Jp2x7_K=temp[-2].T
-    Na=temp[3].T[4]
-    Jnak=temp[-1].T
-    
-    plt.plot(t,Jnak)
-    plt.xlabel("time t")
-    plt.ylabel("Glut")
-    plt.show()
-    
-    plt.plot(t,Jp2x7_K)
-    plt.xlabel("time t")
-    plt.ylabel("Jl")    
-    plt.show()
-    
-    plt.plot(t,K)
-    plt.xlabel("time t")
-    plt.ylabel("$K$ ")
-    plt.show()
-    
-    plt.plot(t,Na)
-    plt.xlabel("time t")
-    plt.ylabel("$Na$ ")
-    plt.show()
-    
-    V=temp[1].T[4]
-    t=np.linspace(0,tmax,len(V))
-    plt.plot(t,V)
-    plt.xlabel("time t")
-    plt.ylabel("$Voltage(in mV)$ ")
-    plt.plot()
-    plt.show()
-    
-    plt.plot()
-    plt.show()
-   
-multsimu(temp)
