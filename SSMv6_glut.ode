@@ -1,0 +1,168 @@
+# The OPC calcium model
+
+# ODES
+dCa/dt=fi*(Jip3(Ca, Cer, h)+Jleak(Ca, Cer)+Jryr(Ca, Cer, w)-Jserca(Ca)+ Jsocc(cer,volt)+Jncxca(Ca,Na ,volt)-Jpmca(Ca)+Jl(Ca,mL,hL,volt)+Jt(Ca,mT,hTf,volt)+Jnmda_Ca(On, Ca, Na, K,volt)+Jampa_Ca(O, Ca, Na, K,volt))
+dCer/dt=(-gamma*fe*(Jip3(Ca, Cer,  h)+Jleak(Ca, Cer)+ Jryr(Ca, Cer, w)-Jserca(Ca)))
+dh/dt=((hinf(Ca) - h) / (1 / (a2 * ((d_2 * (IP3 + d_1) / (IP3 + d_3)) + Ca))))
+dw/dt=(winf(Ca) -w) / (winf(Ca) / kc)
+dx/dt=((xinf(Ca, Na)-x)/(0.25+tau_o/(1+(Ca/ktau))))
+
+dNa/dt=-3 * Jncxna(Ca, Na, volt)-3*Jnak(Ca, Na, K, volt)+(Narest-Na)/tetana+Jnmda_Na(On, Ca, Na, K,volt)+Jampa_Na(O, Ca, Na, K,volt)
+dK/dt=2*Jnak(Ca, Na,K, volt)+(Krest-K)/tetak+Jk(k, volt)+Jleak_k(volt)-Jnmda_K(On, Ca, Na, K,volt)-Jampa_K(O, Ca, Na, K,volt)
+dvolt/dt=(-Ileak(volt)-Isoc(Cer,volt)-Ik(K,volt)-Inak(Ca,Na,K,volt)-Incx(Ca, Na, volt)-Ileak_k(volt)-Il(Ca,mL,hL,volt)-It(Ca,mT,hTf,volt))/(Cm*sur)*100
+dmL/dt=(barmL(volt)-mL)/taumL(volt)
+dhL/dt=(barhL(volt)-hL)/tauhL(volt)
+dmT/dt=(barmT(volt)-mT)/taumT(volt)
+dhTf/dt=(barhT(volt)-hTf)/tauhTf(volt)
+
+dC0a/dt=(-Rb*Glut*C0a+Ru1*C1a)
+dC1a/dt = (Rr*D1a+Ru2*C2a+Rb*Glut*C0a-(Rd+Ru1+Rb*Glut)*C1a)
+dC2a/dt = (Rc*O+Rr *D2a+Rb*Glut*C1a-(Rd+Ru2+R0)*C2a)
+dD1a/dt = (Rd*C1a-Rr*D1a)
+dD2a/dt = (Rd*C2a-Rr*D2a)        
+dC0n/dt = (-Rbn*Glut*C0n+Run*C1n)
+dC1n/dt = (Run*C2n+Rbn*Glut*C0n-(Run+Rbn*Glut)*C1n)
+dC2n/dt = (Rcn*On+Rdn*D2n+Rbn*Glut*C1n-(Rrn+R0n+Run)*C2n)
+dD2n/dt = (Rrn*C2n-Rdn*D2n)
+
+
+
+# Algebraic equatons
+Glut=log(Glutn)
+On=1-(C0n+C1n+C2n+D2n)
+O=1-(C0a+C1a+C2a+D1a+D2a)
+#Q4=1-(D1+D2+D3+D4+C1+C2+Q1+Q2+C4+C3+Q3)
+barmL(volt)=1/(1+exp(-(volt)/6))
+taumL(volt)=(18*exp(-((volt+45)/20)**2)+10)/10
+tauhL(volt)=(10*exp(-((volt+100)/10)**2)+20)/10
+Eca(Ca)=R*T/(2*F)*log(cao/(Ca*10**(-3)))*10**3
+barhL(volt)=1/(1+exp((volt)/5))
+Il(Ca,mL,hL,volt)=gL*mL*hL*(volt-Eca(ca))
+Jl(Ca,mL,hL,volt)=-alphaca*Il(Ca,mL,hL,volt)*10**6
+
+barmT(volt)=1/(1+exp(-(volt+5)/6))
+barhT(volt)=1/(1+exp((volt+5)/10))
+tauhTf(volt)=exp(-((volt+5)/10)**2)+2
+taumT(volt)=exp(-((volt+5)/6)**2)+2
+
+It(Ca,mT,hTf,volt)=gT*mT*hTf*(volt-Eca(ca))
+Jt(Ca,mT,hTf,volt)=-alphaca*It(Ca,mT,hTf,volt)*10**6
+
+hinf(Ca)=(d_2*(IP3 +d_1)/(ip31+d_3))/((d_2*(IP3 +d_1)/(ip31+d_3))+Ca)
+ninf(Ca)=Ca / (Ca + d5)
+winf(Ca)=(ka / (Ca^4) + 1 + (Ca^3) / kb) / (1 / kc + ka / (Ca^4) + 1 + (Ca^3) / kb)
+xinf(Ca, Na)=1-1/((1+(Ca/kca)^2)*(1+(kna/Na)^2))
+Jip3(Ca, Cer, h)=v_ip3*(minf^3)*(ninf(Ca)^3)*(h^3)*(Cer-Ca)
+Jserca(Ca)=v3*(Ca^hc3)/ ((k3serc^hc3) + (Ca^hc3))
+Jleak(Ca, Cer)=v2 * (Cer - Ca)
+Jryr(Ca, Cer, w)=vr * w * (1 + (Ca^3) / kb1) / (ka / (Ca^4) + 1 + (Ca^3) / kb1) * (Cer - Ca)
+barvs=2*Vs/((-67-Eca(Ca))*alphaca)
+Isoc(cer, volt)=(tanh(Cer-ksoc))/2*(volt-100)
+Jsocc(Cer,volt)=alphaca*barvs*Isoc(cer, volt)
+
+Incx(Ca, Na,volt)=1 / (1 + (kn / Ca)^1.5) * gncx*volt* (exp(eta * VFRT(volt))*Na^3*cao -exp((eta - 1) * VFRT(volt))*nao^3*Ca*10**(-3)) / (1 + gncx*((Na**3) * cao + nao**3*Ca*10**(-3) ))    
+            
+Jncxna(Ca, Na, volt)=-alpha*Incx(Ca, Na, volt)*10**3
+Jncxca(Ca, Na, volt)=-alphaca*Incx(Ca, Na, volt)*10**6
+Ileak(volt)=gleak*(volt-Vl)
+minf=IP3 /(IP3  + d11)
+
+alphaca=1/(2*Vosteo*F)
+
+alpha=1/(Vosteo*F)
+
+Inak(Ca,Na,K,volt)=barInak*Kout/(Kout+Knakko)*Na**1.5/(Na**1.5+Knakna**1.5)*(volt+135.1)/(volt+300)
+Jnak(Ca, Na,K,volt)=-alpha*Inak(Ca,Na,K,volt)*10**3
+
+VFRT(volt)=volt*10**(-3) * F / (R * temp)
+
+Ek=R*temp/(F)*log(Kout/K)*10**3
+Ik(K, volt)=gk*sqrt(Kout)*(volt-Ek)
+Jk(K, volt)=-alpha*Ik(K, volt)*10**3
+
+Ileak_k(volt)=gleakk*(volt-vlk)
+Jleak_k(volt)=-alpha*Ileak_k(volt)*10**3
+
+Jpmca(ca)=v_pmca * (Ca**2) / ((Ca**2) + (k_pmca**2))
+#Ip2x7(Ca, Na, K, Q1, Q2, Q3, Q4,volt)=(g12*(Q1+Q2)+g34*(Q3+Q4))*volt
+#Jp2x7_Ca(Ca, Na, K, Q1, Q2, Q3, Q4,volt)=-f_Ca*alphaca*Ip2x7(Ca, Na, K, Q1, Q2, Q3, Q4,volt)*10**(6)
+#Jp2x7_Na(Ca, Na, K, Q1, Q2, Q3, Q4,volt)=-f_Na*alpha*Ip2x7(Ca, Na, K, Q1, Q2, Q3, Q4,volt)*10**(3)
+#Jp2x7_K(Ca, Na, K, Q1, Q2, Q3, Q4,volt)=-f_K*alpha*Ip2x7(Ca, Na, K, Q1, Q2, Q3, Q4,volt)*10**(3)
+
+B=1/(1+exp(-0.062*volt)*Mgo/3.57)
+Inmda(On, Ca, Na, K,volt)=gNMDA*B*On*volt
+Iampa(O, Ca, Na, K,volt)=gAMPA*O*volt   
+     
+Jampa_Ca(O, Ca, Na, K,volt)=-f_Ca*alphaca*Iampa(O, Ca, Na, K,volt)*10**(6)
+Jnmda_Ca(On, Ca, Na, K,volt)=-f_Ca*alphaca*Inmda(On, Ca, Na, K,volt)*10**(6)
+Jampa_Na(O, Ca, Na, K,volt)=-f_Na*alpha*Iampa(O, Ca, Na, K,volt)*10**3
+Jnmda_Na(On, Ca, Na, K,volt)=-f_Na*alpha*Inmda(On, Ca, Na, K,volt)*10**3
+Jampa_K(O, Ca, Na, K,volt)=-f_K*alpha*Iampa(O, Ca, Na, K,volt)*10**3
+Jnmda_K(On, Ca, Na, K,volt)=-f_K*alpha*Inmda(On, Ca, Na, K,volt)*10**3
+
+
+# Parameters
+
+par Vs=0.01252 Glutn=1 gL=0 gT=0
+par narest=12 tetana=10 krest=120 tetak=10 A=0.
+par Vmean=-60 vncx=1.4 eta=0.483 Vol=-80 R=8.314 P=96.4853321 Temp=300. cao=2.5 nao=140 ko=4. kout=4 ksat=0.25 kmcao=1.3 kmnao=97.63 kmnai=12.3 kmcai=0.0026 kn=0.5
+par Jncx_bar=1 ccai=0.5
+par v3=120. hc3=2. k3serc=0.3 v2=0.5 
+par v_ip3=0.88 ip3base=0.2 d11=0.13 d5=0.08234
+par k_pmca=0.8 v_pmca=0.6
+par vr=18. ka1=0.0.00864 kb1=0.2573
+par fi=0.05 gamma=9. fe=0.05 
+par a2=0.2 d_1=0.13 d_2=1.049 d_3=0.9434 ip31=0.2
+par Ks=50. tau_soc=30.
+par ka=0.01920 kb=0.2573 kc=0.0571
+par kca=5. kna=5. tau_o=10. ktau=1.
+par Pk=30. Pna=1. Pca=35. F=96485.3321 z=2. Vosteo=6.5 
+par k1p=1050. k2p=481. k3p=2000. k4p=320. k1m=172.1 k2m=40. k3m=79300. k4m=40. K0d_Nae=15.5 Kd_Ke=0.213 Kd_Mgatp=2.51 K0d_Nai=2.49 Kd_ki= 0.5 pH=7.09 Delta=-0.031 MgATP=4.99
+par MgADP=0.06 PIa=4.95 alphaNak=2.335e-14 Kd=0.43 nH=2.55 VCa=100
+par IP3= 0.2
+par Sm=0.000000025 gk=11.58 gleak=1 Vl=30 Kncxca=0.502 gncx=0.04 nncxh=1.5 Cm=1
+par sur=5000 ksoc=0.939
+par barInak=22.6 Knakko=1.32 Knakna=14.5
+par f_Na=0.477 f_K=0.477 f_Ca=0.046
+par k1=0.3 k2=1260 k3=2.4 k4=1575 k5=1.58 k6=221 L1=0.0001 L2=0.004 L3=0.05 H1=0.001 H2=0.01 Hat2=0.1 H4=0.6 H3=0 g12=7.5*3 g34=7.5*3
+par gleakk=2 Vlk=70 Rb=10000.0 R0=2.7*10 Rc=0.4 Ru1=0.07866 Ru2=114.66 Rd=0.09 Rr=0.0128 gAMPA= 1.5 
+par Rbn=41666.666 Run=0.1075 R0n=23.25 Rcn=0.738 Mgo=1 Rdn=0.007 Rrn=0.05666 gNMDA=0.7
+
+# Inital Conditons.
+# C(0)=0.1179
+Ca(0)=0.1279388901958284
+# Cer(0)=14
+Cer(0)=25.898965426552827
+# h(0)=0.74
+h(0)=0.661
+# w(0)=0
+w(0)=0.6605
+# x(0)=0
+x(0)=0.1466
+# Na(0)=21.1642
+Na(0)=12.102
+K(0)=117.07
+volt(0)=-67.65327008405072
+mL(0)=0
+hL(0)=1
+mT(0)=0
+hTf(0)=1
+C0a(0)=1
+C1a(0)=0
+C2a(0)=0
+D1a(0)=0
+D2a(0)=0        
+C0n(0)=1
+C1n(0)=0
+C2n(0)=0
+D2n(0)=0
+
+# Numerics
+@ TOTAL=400,DT=.005,xlo=0,xhi=250,ylo=-3,yhi=3
+@ NPLOT=1,XP1=t,YP1=Ca
+@ MAXSTOR=10000000
+@ BOUNDS=1000000
+@ dsmin=1e-5,dsmax=0.05,parmin=0.005,parmax=1,autoxmin=0,autoxmax=1
+@ autoymax=1.5,autoymin=0,Ntst=50,Nmax=20000,NPr=1000,Ds=0.001,Dsmin=1e-05,EPSL=1e-07,Dsmax=0.05,EPSS=1e-5,EPSU=1e-7
+
+done
