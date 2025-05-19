@@ -1,6 +1,10 @@
 # SSM-model
-Model for Calcium Dynamic in OPCs.
+# Model for Calcium Dynamics in OPCs
 
-The file SSM.py is a python script to modelise the SSM model.
+This repository contains code for modeling calcium dynamics in Oligodendrocyte Precursor Cells, based on the research from [cite paper].
 
-The SSMDeterminist.ODE file is a julia script for xppAUTO (SSM model without noise and diffusion term).
+## Features
+
+- **Stochastic Simulation**: The Python file is used for the stochastic simulation of calcium dynamics.
+- **Bifurcation Analysis**: The `.xpp` file is used in XPPAuto for bifurcation analysis.
+    Licence : Informations sur la licence du projet.
