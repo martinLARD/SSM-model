@@ -1,14 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from numba import jit
-from scipy import stats
-from scipy.optimize import curve_fit
-import seaborn as sb
-import scalt_compute as sc
 import time
-import imageio
-import pandas as pd
-from scipy.stats import chisquare
 
 # Error class
 class StabilityError(Exception):
@@ -96,11 +88,11 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
     f_Ca=0.046
     
     k1 = 0.3
-    k2 = 1260#40000/31.75 #31.6 ???
+    k2 = 1260 #40000/31.75 #31.6 ???
     k3 = 2.4
-    k4 = 1575#50000/31.75
+    k4 = 1575 #50000/31.75
     k5 = 1.58
-    k6 = 221#7000/31.75
+    k6 = 221 #7000/31.75
     L1 = 0.0001
     L2 = 0.004
     L3 = 0.05
@@ -109,8 +101,8 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
     Hat2 = 0.1#0.01
     H4 = 0.6
     H3=0
-    g12 = 7.5*3 # nS
-    g34 = 7.5*3 # nS
+    barg_p2x7 = 7.5*3 # nS
+
     
     T = 300
     F = 96485.3321
@@ -148,18 +140,18 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
     
     
     #NMDA
-    Rbn=5*10**6/60
-    Run=12.9/60 
+    Rbn=5*10**6/(60*2) #60
+    Run=12.9/(60*2) 
     
-    R0n=46.5 
-    Rcn=73.8/10
+    R0n=46.5 /2
+    Rcn=73.8/(10*2)
     
     Mgo=1 #1 to 2 mM
     
-    Rdn=8.4/600
-    Rrn=6.8/60
+    Rdn=8.4/(600*2)
+    Rrn=6.8/(60*2)
     
-    gNMDA=5.6/4 #5.6/2 #/2 #nS
+    gNMDA=5.6/(4*2) #5.6/2 #/2 #nS
     
     
     #IP3
@@ -192,7 +184,7 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
     
     
     def Ip2x7(Ca, Na, K, Q1, Q2, Q3, Q4,volt):
-        return (g12*(Q1+Q2)+g34*(Q3+Q4))*volt
+        return barg_p2x7*((Q1+Q2)+(Q3+Q4))*volt
     
     def Jp2x7_Ca(Ca, Na, K, Q1, Q2, Q3, Q4,volt):
         alpha=1/(2*Vosteo*F)
@@ -221,30 +213,30 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
      
     def Jampa_Ca(O, Ca, Na, K,volt):
         alpha=1/(2*Vosteo*F)
-        return -f_Ca*alpha*Iampa(O, Ca, Na, K,volt)*10**(6)
+        return -f_Ca*alpha*Iampa(O, Ca, Na, K,volt)*10**(6) #-6 is for microM
     
     def Jnmda_Ca(On, Ca, Na, K,volt):
         alpha=1/(2*Vosteo*F)
-        return -f_Ca*alpha*Inmda(On, Ca, Na, K,volt)*10**(6)
+        return -f_Ca*alpha*Inmda(On, Ca, Na, K,volt)*10**(6) #-6 is for microM
     
 
     def Jampa_Na(O, Ca, Na, K,volt):
         alpha=1/(Vosteo*F)
-        return -f_Na*alpha*Iampa(O, Ca, Na, K,volt)*10**3
+        return -f_Na*alpha*Iampa(O, Ca, Na, K,volt)*10**3 #-3 is for mM
     
     def Jnmda_Na(On, Ca, Na, K,volt):
         alpha=1/(Vosteo*F)
-        return -f_Na*alpha*Inmda(On, Ca, Na, K,volt)*10**3
+        return -f_Na*alpha*Inmda(On, Ca, Na, K,volt)*10**3 #-3 is for mM
     
     
     def Jampa_K(O, Ca, Na, K,volt):
         alpha=1/(Vosteo*F)
 
-        return -f_K*alpha*Iampa(O, Ca, Na, K,volt)*10**3
+        return -f_K*alpha*Iampa(O, Ca, Na, K,volt)*10**3 #-3 is for mM
     
     def Jnmda_K(On, Ca, Na, K,volt):
         alpha=1/(Vosteo*F)
-        return -f_K*alpha*Inmda(On, Ca, Na, K,volt)*10**3
+        return -f_K*alpha*Inmda(On, Ca, Na, K,volt)*10**3 #-3 is for mM
     
     #######
     
@@ -256,7 +248,7 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
     def Jsoc(Ca,Cer,volt):
         Eca=R*T/(2*F)*np.log(Caout/(Ca*10**-3))*10**3
         alpha=1/(2*Vosteo*F)
-        barvs=2*Vs/((-67-Eca)*alpha)
+        barvs=1#2*Vs/((-67-Eca)*alpha)
         return alpha*barvs*Isoc(Ca,Cer, volt)
         
     def Inak(Ca,Na,K,volt,Kout):
@@ -272,7 +264,12 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
     
     def ninf(Ca): 
         return Ca / (Ca + d5)
-        
+    
+    def Kx(Ca, Na): 
+        return kmcao * (Na**3) + (kmnao**3) * Ca + (kmnai**3) * cao * (1 + Ca / kmcai) + kmcai * (Naout**3) * (1 + (Na**3) / (kmnai**3)) + (Na**3) * cao + (Naout**3) * Ca
+    
+    def soc_inf(Cer): 
+        return (Ks**4) / ((Ks**4) + (Cer**4))
     
     def winf(Ca): 
         return (ka / (Ca**4) + 1 + (Ca**3) / kb) / (1 / kc + ka / (Ca**4) + 1 + (Ca**3) / kb)
@@ -351,7 +348,7 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
     def Ileak_K(K,volt,Kout):
         Ek=R*T/(F)*np.log(Kout/K)*10**3
 
-        return gleakK*(volt-Ek)
+        return gleakK*(volt-Vlk)
     
     def Jleak_K(K,volt,Kout):
         alpha=1/(Vosteo*F)
@@ -475,23 +472,25 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
             A=ATP
         if rdmATP==True:
             
-            if np.random.binomial(1, 0.005)==1:
+            if np.random.binomial(1, 0.001)==1 and k>5000:
                     trace=k
                     rdn=np.abs(np.random.randn(1)*10**-3)[0]
+                    rdn=rdn/2
             if k<trace+10:
                     A=rdn
-        saveA[k]=A
+        #saveA[k]=A
         if k<Glut_start*100:
             Glut=0
         elif k>Glut_start*100+Glut_time*100:
             Glut=0
         else:
             Glut=G
-        if rdmGlut==True:
+        if rdmGlut==True :
             #print("rdm Glut")
-            if np.random.binomial(1, 0.005)==1:
+            if np.random.binomial(1, 0.001)==1 and k>5000:
                         trace=k
                         rdn=np.abs(np.random.randn(1)*10**-3)[0]
+                        rdn=rdn/2
             if k<trace+10:
                         Glut=rdn
         saveA[k]=Glut
@@ -607,10 +606,10 @@ def SPDE_solver(ICs = [0.16, 30.0, 0.64, 0.88, 0.61, 0.12, 13.0, 0.0],  # Initia
     if np.isnan(Ca[4, 1]):
         print('!!! NaN value !!')
         Ca=np.zeros((8,2))
-    return Ca, volt , K, Na, Cer, h, w, x , saveL, hL, mT, hTf, D1a, D2a, C0n, C1n, C2n, On, D2n,Jl(Ca.T[4],saveL,savehL,volt.T[4]),saveA
+    return Ca, volt , K, Na, Cer, h, w, x , saveL, hL, mT, hTf, D1a, D2a, C0n, C1n, C2n, On, D2n,Il(Ca.T[4],saveL,savehL,volt.T[4]),saveA
 
 m=8
-tmax=360
+tmax=350
 
 Ca=0.12050920535046733
 Cer=26.53200798707888
@@ -653,6 +652,6 @@ D2n=0
 
 aa=time.time()
 ICs = np.array([Ca, Cer, h, s, w, x, Na , K, eta_u, D1, D2, D3, D4, C1, C2, C3, C4, Q1, Q2, Q3, Q4, C0a, C1a, C2a, O, D1a, D2a, C0n, C1n, C2n, On, D2n,volt])
-temp=SPDE_solver(ICs,m=m,tmax=tmax,ATP=0.03e-3,ATP_start=60,ATP_time=180)   
+temp=SPDE_solver(ICs,m=m,tmax=tmax)   
 bb=time.time()
 print('Computation time:',bb-aa)
